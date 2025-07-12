@@ -115,6 +115,8 @@ $kamar_list = $conn->query('SELECT id, nomor FROM tb_kamar ORDER BY nomor')->fet
         .header-row h1 { font-size: 2rem; color: #7c3aed; margin: 0; }
         .add-btn { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08); transition: background 0.2s, box-shadow 0.2s; }
         .add-btn:hover { background: linear-gradient(135deg, #7c3aed, #8b5cf6); box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13); }
+        .print-btn { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1.2rem; cursor: pointer; margin-left: 18px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08); display: flex; align-items: center; }
+        .print-btn:hover { background: #7c3aed; box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13); }
         table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
         th, td { padding: 14px 12px; text-align: left; }
         th { background: #f3e8ff; color: #7c3aed; font-size: 1rem; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
@@ -142,6 +144,52 @@ $kamar_list = $conn->query('SELECT id, nomor FROM tb_kamar ORDER BY nomor')->fet
         @media (max-width: 700px) { .main-content { padding: 1rem 0.5rem; } th, td { padding: 8px 6px; } .header-row { flex-direction: column; gap: 1rem; align-items: flex-start; } }
         @media (max-width: 768px) { .sidebar { width: 70px; } .main-content { margin-left: 70px; border-radius: 0; } }
         @media (max-width: 480px) { .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; border-radius: 0; } }
+        @media print {
+          body, html {
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .navbar, .sidebar, .print-btn, .add-btn, form, .sidebar-menu, .sidebar-logout-form, .mobile-menu-toggle {
+            display: none !important;
+          }
+          .main-content, .container {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+          }
+          h1, h2 {
+            text-align: center !important;
+            color: #333 !important;
+            margin-top: 0 !important;
+            margin-bottom: 18px !important;
+            font-size: 1.5em !important;
+          }
+          table {
+            width: 100% !important;
+            font-size: 1em !important;
+            border-collapse: collapse !important;
+            margin: 0 0 18px 0 !important;
+            box-shadow: none !important;
+          }
+          th, td {
+            border: 1px solid #888 !important;
+            padding: 8px 6px !important;
+            color: #222 !important;
+            background: #fff !important;
+          }
+          th {
+            background: #e9d5ff !important;
+            color: #5b21b6 !important;
+          }
+          tr:nth-child(even) {
+            background: #f3e8ff !important;
+          }
+        }
     </style>
 </head>
 <body>
@@ -180,6 +228,7 @@ $kamar_list = $conn->query('SELECT id, nomor FROM tb_kamar ORDER BY nomor')->fet
     <div class="main-content">
         <div class="header-row">
             <h1><i class="fas fa-box"></i> Manajemen Barang Kost</h1>
+            <button class="print-btn" onclick="window.print()" title="Cetak Halaman"><i class="fas fa-print"></i></button>
             <button id="btnTambahBarang" class="add-btn"><i class="fas fa-plus"></i> Tambah Barang</button>
         </div>
         <div style="overflow-x:auto;">

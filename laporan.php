@@ -96,6 +96,8 @@ $barang_bawaan = $conn->query('SELECT bb.*, p.nama AS nama_penghuni, p.no_ktp, b
         @media (max-width: 900px) { .main-content { max-width: 98vw; padding: 1.2rem 0.5rem; } }
         @media (max-width: 768px) { .sidebar { width: 70px; padding: 1rem 0; } .sidebar-menu a { padding: 15px 10px; justify-content: center; } .sidebar-menu a span { display: none; } .main-content { margin-left: 0; padding: 100px 1rem 1rem 1rem; } .navbar { padding: 0 1rem; } .navbar-brand span { display: none; } .user-info span { display: none; } h1 { font-size: 2rem; } }
         @media (max-width: 480px) { .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; padding: 100px 0.5rem 1rem 0.5rem; } }
+        .print-btn { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1.2rem; cursor: pointer; margin-left: 18px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08); display: flex; align-items: center; }
+        .print-btn:hover { background: #7c3aed; box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13); }
     </style>
 </head>
 <body>
@@ -132,7 +134,10 @@ $barang_bawaan = $conn->query('SELECT bb.*, p.nama AS nama_penghuni, p.no_ktp, b
         </form>
     </div>
     <div class="main-content">
-    <h1>Laporan Kost</h1>
+    <div style="display:flex;align-items:center;justify-content:center;margin-bottom:2.5rem;gap:18px;">
+  <h1 style="margin-bottom:0;">Laporan Kost</h1>
+  <button class="print-btn" onclick="window.print()" title="Cetak Halaman"><i class="fas fa-print"></i></button>
+</div>
     <form method="post" action="laporan_pdf.php" target="_blank" style="text-align:right;">
         <button type="submit" class="export-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
     </form>

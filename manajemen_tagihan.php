@@ -424,6 +424,8 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
             .sidebar.active { transform: translateX(0); }
             .main-content { margin-left: 0; border-radius: 0; }
         }
+        .print-btn { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1.2rem; cursor: pointer; margin-left: 18px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08); display: flex; align-items: center; }
+        .print-btn:hover { background: #7c3aed; box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13); }
     </style>
 </head>
 <body>
@@ -463,7 +465,7 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
     <div class="main-content">
         <div class="header-row">
             <h1><i class="fas fa-file-invoice-dollar"></i> Manajemen Tagihan</h1>
-            <button class="add-btn"><i class="fas fa-plus"></i> Tambah Tagihan</button>
+            <button class="print-btn" onclick="window.print()" title="Cetak Halaman"><i class="fas fa-print"></i></button>
         </div>
         <div style="overflow-x:auto;">
         <table>

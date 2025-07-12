@@ -290,6 +290,8 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             background: #ede9fe;
             color: #5b21b6;
         }
+        .print-btn { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 1.2rem; cursor: pointer; margin-left: 18px; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08); display: flex; align-items: center; }
+        .print-btn:hover { background: #7c3aed; box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13); }
         @media (max-width: 700px) {
             .main-content { padding: 1rem 0.5rem; }
             th, td { padding: 8px 6px; }
@@ -412,6 +414,52 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
           background: linear-gradient(135deg, #7c3aed, #8b5cf6);
           box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13);
         }
+        @media print {
+          body, html {
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .navbar, .sidebar, .print-btn, .add-btn, form, .sidebar-menu, .sidebar-logout-form, .mobile-menu-toggle {
+            display: none !important;
+          }
+          .main-content, .container {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+          }
+          h1, h2 {
+            text-align: center !important;
+            color: #333 !important;
+            margin-top: 0 !important;
+            margin-bottom: 18px !important;
+            font-size: 1.5em !important;
+          }
+          table {
+            width: 100% !important;
+            font-size: 1em !important;
+            border-collapse: collapse !important;
+            margin: 0 0 18px 0 !important;
+            box-shadow: none !important;
+          }
+          th, td {
+            border: 1px solid #888 !important;
+            padding: 8px 6px !important;
+            color: #222 !important;
+            background: #fff !important;
+          }
+          th {
+            background: #e9d5ff !important;
+            color: #5b21b6 !important;
+          }
+          tr:nth-child(even) {
+            background: #f3e8ff !important;
+          }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </head>
@@ -452,7 +500,7 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <div class="header-row">
             <h1><i class="fas fa-door-open"></i> Manajemen Kamar</h1>
-            <button id="btnTambahKamar" class="add-btn"><i class="fas fa-plus"></i> Tambah Kamar</button>
+            <button class="print-btn" onclick="window.print()" title="Cetak Halaman"><i class="fas fa-print"></i></button>
         </div>
         <div style="overflow-x:auto;">
         <table>
