@@ -1,5 +1,8 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
@@ -12,6 +15,7 @@ $bulan_ini = date('Y-m');
 $pendapatan_bulan_ini = $conn->query("SELECT SUM(jml_tagihan) FROM tb_tagihan WHERE status = 'lunas' AND bulan = '$bulan_ini'")->fetchColumn();
 $pendapatan_bulan_ini = $pendapatan_bulan_ini ? $pendapatan_bulan_ini : 0;
 $tagihan_pending = $conn->query("SELECT COUNT(*) FROM tb_tagihan WHERE status != 'lunas'")->fetchColumn();
+$total_barang_kost = $conn->query('SELECT COUNT(*) FROM tb_barang')->fetchColumn();
 
 // Query pendapatan per bulan (6 bulan terakhir)
 $pendapatan_per_bulan = [];
@@ -441,7 +445,7 @@ for ($i = 5; $i >= 0; $i--) {
             <li><a href="manajemen_penghuni.php"><i class="fas fa-users"></i> <span>Manajemen Penghuni</span></a></li>
             <li><a href="manajemen_kamar.php"><i class="fas fa-door-open"></i> <span>Manajemen Kamar</span></a></li>
             <li><a href="manajemen_tagihan.php"><i class="fas fa-file-invoice-dollar"></i> <span>Manajemen Tagihan</span></a></li>
-            <li><a href="#"><i class="fas fa-chart-bar"></i> <span>Laporan</span></a></li>
+            <li><a href="laporan.php" <?php if(basename($_SERVER['PHP_SELF'])=='laporan.php') echo 'class="active"'; ?>><i class="fas fa-file-alt"></i> <span>Laporan</span></a></li>
             <li><a href="#"><i class="fas fa-cog"></i> <span>Pengaturan</span></a></li>
         </ul>
         <form action="logout.php" method="post" class="sidebar-logout-form">
@@ -468,6 +472,13 @@ for ($i = 5; $i >= 0; $i--) {
                 <div class="stat-label">Total Kamar</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon bills">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="stat-number"><?php echo $total_barang_kost; ?></div>
+                <div class="stat-label">Barang Kost</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-icon tenants">
                     <i class="fas fa-users"></i>
                 </div>
@@ -480,13 +491,6 @@ for ($i = 5; $i >= 0; $i--) {
                 </div>
                 <div class="stat-number">Rp <?php echo number_format($pendapatan_bulan_ini,0,',','.'); ?></div>
                 <div class="stat-label">Pendapatan Bulan Ini</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bills">
-                    <i class="fas fa-file-invoice"></i>
-                </div>
-                <div class="stat-number"><?php echo $tagihan_pending; ?></div>
-                <div class="stat-label">Tagihan Pending</div>
             </div>
         </div>
 

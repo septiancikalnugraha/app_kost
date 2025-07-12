@@ -1,5 +1,8 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
@@ -445,7 +448,9 @@ if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
             <li><a href="manajemen_penghuni.php"><i class="fas fa-users"></i> <span>Manajemen Penghuni</span></a></li>
             <li><a href="manajemen_kamar.php"><i class="fas fa-door-open"></i> <span>Manajemen Kamar</span></a></li>
             <li><a href="manajemen_tagihan.php" class="active"><i class="fas fa-file-invoice-dollar"></i> <span>Manajemen Tagihan</span></a></li>
-            <li><a href="#"><i class="fas fa-chart-bar"></i> <span>Laporan</span></a></li>
+            <li><a href="manajemen_barang.php"><i class="fas fa-box"></i> <span>Manajemen Barang Kost</span></a></li>
+            <li><a href="manajemen_barang_bawaan.php"><i class="fas fa-suitcase"></i> <span>Manajemen Barang Bawaan</span></a></li>
+            <li><a href="laporan.php" <?php if(basename($_SERVER['PHP_SELF'])=='laporan.php') echo 'class="active"'; ?>><i class="fas fa-file-alt"></i> <span>Laporan</span></a></li>
             <li><a href="#"><i class="fas fa-cog"></i> <span>Pengaturan</span></a></li>
         </ul>
         <form action="logout.php" method="post" class="sidebar-logout-form">

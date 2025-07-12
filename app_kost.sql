@@ -124,3 +124,13 @@ INSERT INTO tb_brng_bawaan (id_penghuni, id_barang) VALUES
 (2, 3), -- Siti bawa TV
 (3, 1), -- Budi bawa AC
 (3, 4); -- Budi bawa Mesin Cuci
+
+-- Tabel relasi barang dengan kamar (many-to-many)
+CREATE TABLE IF NOT EXISTS tb_barang_kamar (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_barang INT NOT NULL,
+    id_kamar INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_barang) REFERENCES tb_barang(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_kamar) REFERENCES tb_kamar(id) ON DELETE CASCADE
+);

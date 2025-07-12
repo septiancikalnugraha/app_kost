@@ -1,11 +1,15 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 require_once 'config/database.php';
 $conn = getConnection();
+$error = '';
 // Proses tambah penghuni
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
     if ($_POST['form_mode'] === 'tambah' && isset($_POST['nama'], $_POST['no_ktp'], $_POST['no_hp'], $_POST['tgl_masuk'])) {
@@ -14,28 +18,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
         $no_hp = $_POST['no_hp'];
         $tgl_masuk = $_POST['tgl_masuk'];
         $kamar_id = isset($_POST['kamar']) ? $_POST['kamar'] : null;
-        $stmt = $conn->prepare('INSERT INTO tb_penghuni (nama, no_ktp, no_hp, tgl_masuk, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())');
-        $stmt->execute([$nama, $no_ktp, $no_hp, $tgl_masuk]);
-        $penghuni_id = $conn->lastInsertId();
-        if ($kamar_id) {
-            $stmt = $conn->prepare('INSERT INTO tb_kmr_penghuni (id_penghuni, id_kamar, tgl_masuk) VALUES (?, ?, ?)');
-            $stmt->execute([$penghuni_id, $kamar_id, $tgl_masuk]);
-            // Ambil harga kamar
-            $stmtHarga = $conn->prepare('SELECT harga FROM tb_kamar WHERE id=?');
-            $stmtHarga->execute([$kamar_id]);
-            $hargaKamar = $stmtHarga->fetchColumn();
-            // Insert tagihan bulan ini
-            $bulan = date('Y-m');
-            $stmtKmrPenghuni = $conn->prepare('SELECT id FROM tb_kmr_penghuni WHERE id_penghuni=? AND id_kamar=? AND (tgl_keluar IS NULL OR tgl_keluar="") ORDER BY id DESC LIMIT 1');
-            $stmtKmrPenghuni->execute([$penghuni_id, $kamar_id]);
-            $idKmrPenghuni = $stmtKmrPenghuni->fetchColumn();
-            if ($hargaKamar && $idKmrPenghuni) {
-                $stmt = $conn->prepare('INSERT INTO tb_tagihan (id_kmr_penghuni, bulan, jml_tagihan, status) VALUES (?, ?, ?, "pending")');
-                $stmt->execute([$idKmrPenghuni, $bulan, $hargaKamar]);
+        // Cek duplikat No. KTP
+        $stmt = $conn->prepare('SELECT COUNT(*) FROM tb_penghuni WHERE no_ktp = ?');
+        $stmt->execute([$no_ktp]);
+        if ($stmt->fetchColumn() > 0) {
+            $error = 'No. KTP sudah terdaftar!';
+        } else {
+            $stmt = $conn->prepare('INSERT INTO tb_penghuni (nama, no_ktp, no_hp, tgl_masuk, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())');
+            $stmt->execute([$nama, $no_ktp, $no_hp, $tgl_masuk]);
+            $penghuni_id = $conn->lastInsertId();
+            if ($kamar_id) {
+                $stmt = $conn->prepare('INSERT INTO tb_kmr_penghuni (id_penghuni, id_kamar, tgl_masuk) VALUES (?, ?, ?)');
+                $stmt->execute([$penghuni_id, $kamar_id, $tgl_masuk]);
+                // Ambil harga kamar
+                $stmtHarga = $conn->prepare('SELECT harga FROM tb_kamar WHERE id=?');
+                $stmtHarga->execute([$kamar_id]);
+                $hargaKamar = $stmtHarga->fetchColumn();
+                // Insert tagihan bulan ini
+                $bulan = date('Y-m');
+                $stmtKmrPenghuni = $conn->prepare('SELECT id FROM tb_kmr_penghuni WHERE id_penghuni=? AND id_kamar=? AND (tgl_keluar IS NULL OR tgl_keluar="") ORDER BY id DESC LIMIT 1');
+                $stmtKmrPenghuni->execute([$penghuni_id, $kamar_id]);
+                $idKmrPenghuni = $stmtKmrPenghuni->fetchColumn();
+                if ($hargaKamar && $idKmrPenghuni) {
+                    $stmt = $conn->prepare('INSERT INTO tb_tagihan (id_kmr_penghuni, bulan, jml_tagihan, status) VALUES (?, ?, ?, "pending")');
+                    $stmt->execute([$idKmrPenghuni, $bulan, $hargaKamar]);
+                }
             }
+            header('Location: manajemen_penghuni.php');
+            exit();
         }
-        header('Location: manajemen_penghuni.php');
-        exit();
     } elseif ($_POST['form_mode'] === 'edit' && isset($_POST['id'], $_POST['nama'], $_POST['no_ktp'], $_POST['no_hp'], $_POST['tgl_masuk'])) {
         $id = $_POST['id'];
         $nama = $_POST['nama'];
@@ -43,19 +54,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
         $no_hp = $_POST['no_hp'];
         $tgl_masuk = $_POST['tgl_masuk'];
         $kamar_id = isset($_POST['kamar']) ? $_POST['kamar'] : null;
-        $stmt = $conn->prepare('UPDATE tb_penghuni SET nama=?, no_ktp=?, no_hp=?, tgl_masuk=?, updated_at=NOW() WHERE id=?');
-        $stmt->execute([$nama, $no_ktp, $no_hp, $tgl_masuk, $id]);
-        // Update kamar jika diganti
-        if ($kamar_id) {
-            // Tutup relasi kamar lama
-            $stmt = $conn->prepare('UPDATE tb_kmr_penghuni SET tgl_keluar=NOW() WHERE id_penghuni=? AND (tgl_keluar IS NULL OR tgl_keluar="")');
-            $stmt->execute([$id]);
-            // Insert relasi kamar baru
-            $stmt = $conn->prepare('INSERT INTO tb_kmr_penghuni (id_penghuni, id_kamar, tgl_masuk) VALUES (?, ?, ?)');
-            $stmt->execute([$id, $kamar_id, $tgl_masuk]);
+        // Cek duplikat No. KTP (kecuali milik sendiri)
+        $stmt = $conn->prepare('SELECT COUNT(*) FROM tb_penghuni WHERE no_ktp = ? AND id != ?');
+        $stmt->execute([$no_ktp, $id]);
+        if ($stmt->fetchColumn() > 0) {
+            $error = 'No. KTP sudah terdaftar!';
+        } else {
+            $stmt = $conn->prepare('UPDATE tb_penghuni SET nama=?, no_ktp=?, no_hp=?, tgl_masuk=?, updated_at=NOW() WHERE id=?');
+            $stmt->execute([$nama, $no_ktp, $no_hp, $tgl_masuk, $id]);
+            // Update kamar jika diganti
+            if ($kamar_id) {
+                // Tutup relasi kamar lama
+                $stmt = $conn->prepare('UPDATE tb_kmr_penghuni SET tgl_keluar=NOW() WHERE id_penghuni=? AND (tgl_keluar IS NULL OR tgl_keluar="")');
+                $stmt->execute([$id]);
+                // Insert relasi kamar baru
+                $stmt = $conn->prepare('INSERT INTO tb_kmr_penghuni (id_penghuni, id_kamar, tgl_masuk) VALUES (?, ?, ?)');
+                $stmt->execute([$id, $kamar_id, $tgl_masuk]);
+            }
+            header('Location: manajemen_penghuni.php');
+            exit();
         }
-        header('Location: manajemen_penghuni.php');
-        exit();
     }
 }
 // Proses hapus penghuni
@@ -515,7 +533,9 @@ $kamar_tersedia = $conn->query('SELECT id, nomor, harga FROM tb_kamar WHERE stat
             <li><a href="manajemen_penghuni.php" class="active"><i class="fas fa-users"></i> <span>Manajemen Penghuni</span></a></li>
             <li><a href="manajemen_kamar.php"><i class="fas fa-door-open"></i> <span>Manajemen Kamar</span></a></li>
             <li><a href="manajemen_tagihan.php"><i class="fas fa-file-invoice-dollar"></i> <span>Manajemen Tagihan</span></a></li>
-            <li><a href="#"><i class="fas fa-chart-bar"></i> <span>Laporan</span></a></li>
+            <li><a href="manajemen_barang.php"><i class="fas fa-box"></i> <span>Manajemen Barang Kost</span></a></li>
+            <li><a href="manajemen_barang_bawaan.php"><i class="fas fa-suitcase"></i> <span>Manajemen Barang Bawaan</span></a></li>
+            <li><a href="laporan.php" <?php if(basename($_SERVER['PHP_SELF'])=='laporan.php') echo 'class="active"'; ?>><i class="fas fa-file-alt"></i> <span>Laporan</span></a></li>
             <li><a href="#"><i class="fas fa-cog"></i> <span>Pengaturan</span></a></li>
         </ul>
         <form action="logout.php" method="post" class="sidebar-logout-form">
@@ -583,6 +603,11 @@ $kamar_tersedia = $conn->query('SELECT id, nomor, harga FROM tb_kamar WHERE stat
     <div id="modalTambahPenghuni" class="modal-overlay" style="display:none;">
   <div class="modal-content">
     <h2>Tambah Penghuni</h2>
+    <?php if (!empty($error)): ?>
+      <div style="background:#fee2e2;color:#b91c1c;padding:10px 16px;border-radius:8px;margin-bottom:12px;text-align:center;font-weight:500;">
+        <?= htmlspecialchars($error) ?>
+      </div>
+    <?php endif; ?>
     <form id="formTambahPenghuni" method="post" action="">
       <input type="hidden" name="form_mode" id="form_mode" value="tambah">
       <input type="hidden" name="id" id="edit_id">

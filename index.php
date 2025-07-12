@@ -747,6 +747,11 @@
     </div>
 
     <script>
+        // Lock index.php in browser history
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.href);
+        }
+
         class FullScreenDashboard {
             constructor() {
                 this.currentSlide = 0;
@@ -848,28 +853,27 @@
                 let startY = 0;
                 let endX = 0;
                 let endY = 0;
-
-                document.addEventListener('touchstart', (e) => {
+                const sliderElem = document.getElementById('dashboardSlider');
+                if (!sliderElem) return;
+                sliderElem.addEventListener('touchstart', (e) => {
                     startX = e.touches[0].clientX;
                     startY = e.touches[0].clientY;
-                });
-
-                document.addEventListener('touchend', (e) => {
+                }, {passive: false});
+                sliderElem.addEventListener('touchend', (e) => {
                     endX = e.changedTouches[0].clientX;
                     endY = e.changedTouches[0].clientY;
-                    
                     const deltaX = startX - endX;
                     const deltaY = startY - endY;
-                    
                     // Horizontal swipe detection
                     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                        e.preventDefault();
                         if (deltaX > 0) {
                             this.nextSlide();
                         } else {
                             this.prevSlide();
                         }
                     }
-                });
+                }, {passive: false});
             }
         }
 
