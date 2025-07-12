@@ -6,10 +6,43 @@ if (!isset($_SESSION['user_id'])) {
 }
 require_once 'config/database.php';
 $conn = getConnection();
+// Proses tambah/edit kamar
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nomor = $_POST['nomor_kamar'];
+    $harga = $_POST['harga'];
+    $status = $_POST['status'];
+    $created_at = $_POST['created_at'] ?? date('Y-m-d H:i:s');
+    if (isset($_POST['form_mode']) && $_POST['form_mode'] === 'edit' && isset($_POST['edit_id'])) {
+        // Edit kamar
+        $id = $_POST['edit_id'];
+        $stmt = $conn->prepare('UPDATE tb_kamar SET nomor=?, harga=?, status=? WHERE id=?');
+        $stmt->execute([$nomor, $harga, $status, $id]);
+    } else {
+        // Tambah kamar
+        $stmt = $conn->prepare('INSERT INTO tb_kamar (nomor, harga, status, created_at) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$nomor, $harga, $status, $created_at]);
+    }
+    header('Location: manajemen_kamar.php');
+    exit();
+}
+// Proses hapus kamar
+if (isset($_GET['hapus']) && is_numeric($_GET['hapus'])) {
+    $id = $_GET['hapus'];
+    $stmt = $conn->prepare('DELETE FROM tb_kamar WHERE id=?');
+    $stmt->execute([$id]);
+    header('Location: manajemen_kamar.php');
+    exit();
+}
 // Ambil data kamar dan jumlah penghuni per kamar
 $sql = 'SELECT k.*, (
     SELECT COUNT(*) FROM tb_kmr_penghuni kp WHERE kp.id_kamar = k.id AND (kp.tgl_keluar IS NULL OR kp.tgl_keluar = "")
-) AS jumlah_penghuni
+) AS jumlah_penghuni,
+(
+    SELECT GROUP_CONCAT(CONCAT(p.nama, " (", p.no_ktp, ")") SEPARATOR ", ")
+    FROM tb_kmr_penghuni kp 
+    JOIN tb_penghuni p ON kp.id_penghuni = p.id 
+    WHERE kp.id_kamar = k.id AND (kp.tgl_keluar IS NULL OR kp.tgl_keluar = "")
+) AS daftar_penghuni
 FROM tb_kamar k ORDER BY k.id DESC';
 $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -268,7 +301,116 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             .sidebar.active { transform: translateX(0); }
             .main-content { margin-left: 0; border-radius: 0; }
         }
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(60, 0, 120, 0.18);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+        .modal-overlay.active {
+          display: flex !important;
+        }
+        .modal-content {
+          background: #fff;
+          border-radius: 18px;
+          box-shadow: 0 8px 32px rgba(80,36,180,0.18);
+          padding: 2.5rem 2rem 2rem 2rem;
+          min-width: 340px;
+          max-width: 95vw;
+          position: relative;
+          animation: modalIn 0.18s cubic-bezier(.4,2,.6,1) both;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        @keyframes modalIn {
+          from { transform: translateY(40px) scale(0.98); opacity: 0; }
+          to { transform: none; opacity: 1; }
+        }
+        .modal-content h2 {
+          margin-top: 0;
+          color: #7c3aed;
+          font-size: 1.3rem;
+          margin-bottom: 1.2rem;
+          text-align: center;
+        }
+        .form-group {
+          margin-bottom: 1.1rem;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .form-group label {
+          display: block;
+          margin-bottom: 0.4rem;
+          color: #7c3aed;
+          font-weight: 600;
+          font-size: 1rem;
+        }
+        .form-group input, .form-group select {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 7px;
+          border: 1px solid #e2e8f0;
+          font-size: 1rem;
+          outline: none;
+          transition: border 0.2s;
+          background: #f8fafc;
+          margin-bottom: 2px;
+        }
+        .form-group input:focus, .form-group select:focus {
+          border: 1.5px solid #8b5cf6;
+        }
+        .modal-actions {
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 1.5rem;
+          gap: 10px;
+        }
+        .cancel-btn {
+          background: #ede9fe;
+          color: #7c3aed;
+          border: none;
+          border-radius: 8px;
+          padding: 10px 22px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s, color 0.2s;
+          min-width: 90px;
+        }
+        .cancel-btn:hover {
+          background: #d1c4e9;
+          color: #5b21b6;
+        }
+        .add-btn[type="submit"] {
+          background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 12px 22px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 2px 8px rgba(124, 51, 234, 0.08);
+          transition: background 0.2s, box-shadow 0.2s;
+          width: 100%;
+          justify-content: center;
+        }
+        .add-btn[type="submit"]:hover {
+          background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+          box-shadow: 0 4px 16px rgba(124, 51, 234, 0.13);
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -305,31 +447,38 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <div class="header-row">
             <h1><i class="fas fa-door-open"></i> Manajemen Kamar</h1>
-            <button class="add-btn"><i class="fas fa-plus"></i> Tambah Kamar</button>
+            <button id="btnTambahKamar" class="add-btn"><i class="fas fa-plus"></i> Tambah Kamar</button>
         </div>
         <div style="overflow-x:auto;">
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>No</th>
                     <th>Nomor Kamar</th>
                     <th>Harga</th>
                     <th>Status</th>
-                    <th>Penghuni</th>
+                    <th>Penghuni (No. KTP)</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
-            <?php foreach ($kamar as $row): ?>
+            <?php $no=1; foreach ($kamar as $row): ?>
                 <tr>
-                    <td><?= $row['id'] ?></td>
+                    <td><?= $no++ ?></td>
                     <td><?= htmlspecialchars($row['nomor']) ?></td>
                     <td>Rp <?= number_format($row['harga'],0,',','.') ?></td>
-                    <td><?= htmlspecialchars($row['status']) ?></td>
-                    <td><?= $row['jumlah_penghuni'] ?></td>
+                    <td><?= ($row['jumlah_penghuni'] >= 1 ? 'terisi' : 'kosong') ?></td>
+                    <td><?= $row['daftar_penghuni'] ? htmlspecialchars($row['daftar_penghuni']) : 'Kosong' ?></td>
                     <td class="aksi">
-                        <button class="aksi-btn" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="aksi-btn" title="Hapus"><i class="fas fa-trash"></i></button>
+                        <button class="aksi-btn edit-btn" title="Edit"
+                            data-id="<?= $row['id'] ?>"
+                            data-nomor="<?= htmlspecialchars($row['nomor']) ?>"
+                            data-harga="<?= $row['harga'] ?>"
+                            data-status="<?= htmlspecialchars($row['status']) ?>"
+                            data-penghuni="<?= htmlspecialchars($row['daftar_penghuni'] ?? '') ?>">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="aksi-btn hapus-btn" title="Hapus" data-id="<?= $row['id'] ?>"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -337,5 +486,124 @@ $kamar = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
         </table>
         </div>
     </div>
+    <!-- Modal Tambah Kamar -->
+    <div id="modalTambahKamar" class="modal-overlay" style="display:none;">
+      <div class="modal-content" style="min-width:340px;max-width:95vw;">
+        <h2 id="modalKamarTitle">Tambah Kamar</h2>
+        <form id="formTambahKamar" method="post" action="">
+          <input type="hidden" name="created_at" id="created_at">
+          <input type="hidden" name="form_mode" id="form_mode" value="tambah">
+          <input type="hidden" name="edit_id" id="edit_id">
+          <div class="form-group">
+            <label for="nomor_kamar">Nomor Kamar</label>
+            <input type="text" id="nomor_kamar" name="nomor_kamar" required>
+          </div>
+          <div class="form-group">
+            <label for="harga">Harga</label>
+            <input type="number" id="harga" name="harga" required min="0">
+          </div>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status" required>
+              <option value="kosong">Kosong</option>
+              <option value="terisi">Terisi</option>
+            </select>
+          </div>
+          <div class="form-group" id="penghuni_info" style="display:none;">
+            <label for="penghuni_list">Penghuni Saat Ini</label>
+            <textarea id="penghuni_list" name="penghuni_list" readonly style="background:#f3f4f6; min-height:60px; resize:none;"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn">Batal</button>
+            <button type="submit" class="add-btn"><i class="fas fa-plus"></i> Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const btnTambah = document.getElementById('btnTambahKamar');
+  const modal = document.getElementById('modalTambahKamar');
+  if (!btnTambah || !modal) return;
+  const cancelBtn = modal.querySelector('.cancel-btn');
+  const form = document.getElementById('formTambahKamar');
+  const createdAtInput = document.getElementById('created_at');
+  const formMode = document.getElementById('form_mode');
+  const editId = document.getElementById('edit_id');
+  const nomorInput = document.getElementById('nomor_kamar');
+  const hargaInput = document.getElementById('harga');
+  const statusSelect = document.getElementById('status');
+  const modalTitle = document.getElementById('modalKamarTitle');
+  const penghuniInfo = document.getElementById('penghuni_info');
+  const penghuniList = document.getElementById('penghuni_list');
+
+      btnTambah.addEventListener('click', function(e) {
+      e.preventDefault();
+      if(form) form.reset();
+      formMode.value = 'tambah';
+      editId.value = '';
+      penghuniInfo.style.display = 'none';
+      penghuniList.value = '';
+      modalTitle.textContent = 'Tambah Kamar';
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+    if (createdAtInput) {
+      fetch('https://worldtimeapi.org/api/ip')
+        .then(res => res.json())
+        .then(data => {
+          if(data && data.datetime) {
+            createdAtInput.value = data.datetime.replace('T',' ').substring(0,19);
+          } else {
+            createdAtInput.value = '';
+          }
+        })
+        .catch(() => { createdAtInput.value = ''; });
+    }
+  });
+  if(cancelBtn) {
+    cancelBtn.addEventListener('click', function() {
+      modal.style.display = 'none';
+      modal.classList.remove('active');
+    });
+  }
+  window.onclick = function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+      modal.classList.remove('active');
+    }
+  }
+  // Edit button logic
+  document.querySelectorAll('.edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      formMode.value = 'edit';
+      editId.value = btn.dataset.id;
+      nomorInput.value = btn.dataset.nomor;
+      hargaInput.value = btn.dataset.harga;
+      statusSelect.value = btn.dataset.status;
+      
+      // Tampilkan informasi penghuni jika ada
+      if (btn.dataset.penghuni && btn.dataset.penghuni !== '' && btn.dataset.penghuni !== 'Kosong') {
+        penghuniInfo.style.display = 'block';
+        penghuniList.value = btn.dataset.penghuni;
+      } else {
+        penghuniInfo.style.display = 'none';
+        penghuniList.value = '';
+      }
+      
+      modalTitle.textContent = 'Edit Kamar';
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+    });
+  });
+  // Delete button logic
+  document.querySelectorAll('.hapus-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if(confirm('Yakin ingin menghapus kamar ini?')) {
+        window.location = '?hapus=' + btn.getAttribute('data-id');
+      }
+    });
+  });
+});
+</script>
 </body>
 </html> 

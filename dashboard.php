@@ -4,6 +4,26 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
+require_once 'config/database.php';
+$conn = getConnection();
+$total_kamar = $conn->query('SELECT COUNT(*) FROM tb_kamar')->fetchColumn();
+$total_penghuni_aktif = $conn->query('SELECT COUNT(DISTINCT id_penghuni) FROM tb_kmr_penghuni WHERE tgl_keluar IS NULL OR tgl_keluar = ""')->fetchColumn();
+$bulan_ini = date('Y-m');
+$pendapatan_bulan_ini = $conn->query("SELECT SUM(jml_tagihan) FROM tb_tagihan WHERE status = 'lunas' AND bulan = '$bulan_ini'")->fetchColumn();
+$pendapatan_bulan_ini = $pendapatan_bulan_ini ? $pendapatan_bulan_ini : 0;
+$tagihan_pending = $conn->query("SELECT COUNT(*) FROM tb_tagihan WHERE status != 'lunas'")->fetchColumn();
+
+// Query pendapatan per bulan (6 bulan terakhir)
+$pendapatan_per_bulan = [];
+for ($i = 5; $i >= 0; $i--) {
+    $bulan = date('Y-m', strtotime("-{$i} months"));
+    $label = date('M Y', strtotime("-{$i} months"));
+    $total = $conn->query("SELECT SUM(jml_tagihan) FROM tb_tagihan WHERE status = 'lunas' AND bulan = '$bulan'")->fetchColumn();
+    $pendapatan_per_bulan[] = [
+        'label' => $label,
+        'total' => $total ? (float)$total : 0
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -264,7 +284,7 @@ if (!isset($_SESSION['user_id'])) {
         }
 
         .stat-number {
-            font-size: 2.5rem;
+            font-size: 1.7rem;
             font-weight: 700;
             color: #333;
             margin-bottom: 0.5rem;
@@ -444,54 +464,81 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="stat-icon rooms">
                     <i class="fas fa-door-open"></i>
                 </div>
-                <div class="stat-number">24</div>
+                <div class="stat-number"><?php echo $total_kamar; ?></div>
                 <div class="stat-label">Total Kamar</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon tenants">
                     <i class="fas fa-users"></i>
                 </div>
-                <div class="stat-number">18</div>
+                <div class="stat-number"><?php echo $total_penghuni_aktif; ?></div>
                 <div class="stat-label">Penghuni Aktif</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon revenue">
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
-                <div class="stat-number">85M</div>
+                <div class="stat-number">Rp <?php echo number_format($pendapatan_bulan_ini,0,',','.'); ?></div>
                 <div class="stat-label">Pendapatan Bulan Ini</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon bills">
                     <i class="fas fa-file-invoice"></i>
                 </div>
-                <div class="stat-number">3</div>
+                <div class="stat-number"><?php echo $tagihan_pending; ?></div>
                 <div class="stat-label">Tagihan Pending</div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="quick-actions">
-            <h3>Aksi Cepat</h3>
-            <div class="actions-grid">
-                <a href="#" class="action-btn">
-                    <i class="fas fa-plus"></i>
-                    <span>Tambah Penghuni</span>
-                </a>
-                <a href="#" class="action-btn">
-                    <i class="fas fa-door-open"></i>
-                    <span>Kelola Kamar</span>
-                </a>
-                <a href="#" class="action-btn">
-                    <i class="fas fa-file-invoice"></i>
-                    <span>Buat Tagihan</span>
-                </a>
-                <a href="#" class="action-btn">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Lihat Laporan</span>
-                </a>
-            </div>
+        <!-- Ganti dengan grafik batang -->
+        <div class="quick-actions" style="margin-top:2rem;">
+            <h3 style="margin-bottom:1.5rem;">Grafik Pendapatan 6 Bulan Terakhir</h3>
+            <canvas id="barChartPendapatan" height="90"></canvas>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        const ctx = document.getElementById('barChartPendapatan').getContext('2d');
+        const barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode(array_column($pendapatan_per_bulan, 'label')); ?>,
+                datasets: [{
+                    label: 'Pendapatan (Rp)',
+                    data: <?php echo json_encode(array_column($pendapatan_per_bulan, 'total')); ?>,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgba(124, 51, 234, 1)',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    maxBarThickness: 48
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.parsed.y || 0;
+                                return 'Rp ' + val.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + value.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        </script>
     </div>
 
     <script>
